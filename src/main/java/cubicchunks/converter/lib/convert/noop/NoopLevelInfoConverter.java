@@ -21,23 +21,17 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package cubicchunks.converter.lib;
+package cubicchunks.converter.lib.convert.noop;
 
-public class Dimension {
+import cubicchunks.converter.lib.convert.LevelInfoConverter;
 
-    private final String name;
-    private final String directory;
+import java.nio.file.Path;
 
-    public Dimension(String name, String directory) {
-        this.name = name;
-        this.directory = directory;
+public class NoopLevelInfoConverter implements LevelInfoConverter<Object, Object> {
+
+    public NoopLevelInfoConverter(Path p1, Path p2) {
     }
 
-    public String getName() {
-        return this.name;
-    }
-
-    public String getDirectory() {
-        return directory;
+    @Override public void convert() {
     }
 }

@@ -23,83 +23,184 @@
  */
 package cubicchunks.converter.gui;
 
+import static java.awt.GridBagConstraints.HORIZONTAL;
+import static java.awt.GridBagConstraints.NONE;
+import static java.awt.GridBagConstraints.NORTH;
+import static java.awt.GridBagConstraints.NORTHWEST;
+
+import cubicchunks.converter.lib.IProgressListener;
+import cubicchunks.converter.lib.convert.WorldConverter;
+
+import java.awt.Dimension;
+import java.awt.EventQueue;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
-import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.SwingWorker;
 
-import cubicchunks.converter.lib.ConvertProgress;
-import cubicchunks.converter.lib.ISaveConverter;
+public class ConverterWorker extends SwingWorker<Throwable, Void> {
 
-public class ConverterWorker extends SwingWorker<Throwable, ConvertProgress> {
-	private final ISaveConverter converter;
-	private final Path srcPath;
-	private final Path dstPath;
-	private JProgressBar progressBar;
-	private Runnable onDone;
+    private final WorldConverter converter;
+    private final JFrame parent;
+    private JProgressBar progressBar;
+    private JProgressBar convertQueueFill;
+    private JProgressBar ioQueueFill;
+    private Runnable onDone;
 
-	public ConverterWorker(ISaveConverter converter, Path srcPath, Path dstPath, JProgressBar progressBar, Runnable onDone) {
-		this.converter = converter;
-		this.srcPath = srcPath;
-		this.dstPath = dstPath;
-		this.progressBar = progressBar;
-		this.onDone = onDone;
-	}
+    public ConverterWorker(WorldConverter converter, JProgressBar progressBar, JProgressBar convertQueueFill,
+        JProgressBar ioQueueFill, Runnable onDone, JFrame parent) {
+        this.converter = converter;
+        this.progressBar = progressBar;
+        this.convertQueueFill = convertQueueFill;
+        this.ioQueueFill = ioQueueFill;
+        this.onDone = onDone;
+        this.parent = parent;
+    }
 
-	@Override protected Throwable doInBackground() throws Exception {
-		try {
-			this.converter.convert(this::publish, srcPath, dstPath);
-		} catch(Throwable t) {
-			t.printStackTrace();
-			return t;
-		}
-		return null;
-	}
+    @Override protected Throwable doInBackground() {
+        try {
+            this.converter.convert(new IProgressListener() {
+                @Override public void update(Void progress) {
+                    publish(progress);
+                }
 
-	@Override protected void process(List<ConvertProgress> l) {
-		ConvertProgress p = l.get(l.size() - 1);
-		double progress;
-		if (p.getStepProgress() < 0) {
-			progress = 0;
-		} else {
-			progress = 100*p.getStepProgress()/p.getMaxStepProgress();
-		}
-		String message = String.format("Step %d of %d: %s: %.2f%%", p.getStep(), p.getMaxSteps(), p.getStepName(), progress);
-		this.progressBar.setValue((int) (progress));
-		this.progressBar.setString(message);
-	}
+                @Override public IProgressListener.ErrorHandleResult error(Throwable t) {
+                    try {
+                        CompletableFuture<ErrorHandleResult> future = new CompletableFuture<>();
+                        EventQueue.invokeAndWait(() -> future.complete(showErrorMessage(t)));
+                        return future.get();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return ErrorHandleResult.STOP_KEEP_DATA;
+                    }
+                }
+            });
+        } catch (Throwable t) {
+            t.printStackTrace();
+            return t;
+        }
+        return null;
+    }
 
-	@Override
-	protected void done() {
-		onDone.run();
-		Throwable t;
-		try {
-			t = get();
-		} catch (InterruptedException | ExecutionException e) {
-			t = e;
-		}
-		if (t == null) {
-			return;
-		}
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		PrintStream ps;
-		try {
-			ps = new PrintStream(out, true, "UTF-8");
-		} catch (UnsupportedEncodingException e1) {
-			throw new Error(e1);
-		}
-		t.printStackTrace(ps);
-		ps.close();
-		String str;
-		try {
-			str = new String(out.toByteArray(), "UTF-8");
-		} catch (UnsupportedEncodingException e1) {
-			throw new Error(e1);
-		}
-		JOptionPane.showMessageDialog(null, str);
-	}
+    private IProgressListener.ErrorHandleResult showErrorMessage(Throwable error) {
+        String[] options = {"Ignore", "Ignore all", "Stop, delete results", "Stop, keep result"};
+        JPanel infoPanel = new JPanel(new GridBagLayout());
+
+        Insets insets = new Insets(3, 10, 3, 10);
+
+        JTextArea errorInfo = new JTextArea("An error occurred while converting chunks. Do you want to continue?");
+        errorInfo.setLineWrap(true);
+        errorInfo.setEditable(false);
+        errorInfo.setEnabled(false);
+        infoPanel.add(errorInfo, new GridBagConstraints(0, 0, 1, 1, 1, 1, NORTH, HORIZONTAL, insets, 0, 0));
+
+
+        JTextArea exceptionDetails = new JTextArea(exceptionString(error));
+        exceptionDetails.setEditable(false);
+        exceptionDetails.setLineWrap(false);
+
+        JScrollPane scrollPane = new JScrollPane(exceptionDetails);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.setMinimumSize(new Dimension(100, 250));
+        scrollPane.setMaximumSize(new Dimension(500, 320));
+        scrollPane.setPreferredSize(new Dimension(640, 400));
+
+        JButton moreDetails = new JButton();
+        moreDetails.setText("Show details...");
+        moreDetails.addActionListener(e -> {
+            JOptionPane.showConfirmDialog(infoPanel, scrollPane, "Error details", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE);
+        });
+        infoPanel.add(moreDetails, new GridBagConstraints(0, 1, 1, 1, 1, 1, NORTHWEST, NONE, insets, 0, 0));
+
+        int code = JOptionPane.showOptionDialog(
+            parent,
+            infoPanel,
+            "An error occurred while converting chunks", 0, JOptionPane.ERROR_MESSAGE,
+            null, options, "Ignore");
+        if (code == JOptionPane.CLOSED_OPTION) {
+            return IProgressListener.ErrorHandleResult.IGNORE;
+        }
+        switch (code) {
+            case 0:
+                return IProgressListener.ErrorHandleResult.IGNORE;
+            case 1:
+                return IProgressListener.ErrorHandleResult.IGNORE_ALL;
+            case 2:
+                return IProgressListener.ErrorHandleResult.STOP_DISCARD;
+            case 3:
+                return IProgressListener.ErrorHandleResult.STOP_KEEP_DATA;
+            default:
+                assert false;
+                return IProgressListener.ErrorHandleResult.IGNORE;
+        }
+    }
+
+    @Override protected void process(List<Void> l) {
+        int submitted = converter.getSubmittedChunks();
+        int total = converter.getTotalChunks();
+        double progress = 100 * submitted / (float) total;
+        String message = String.format("Submitted chunk tasks: %d/%d %.2f%%", submitted, total, progress);
+        this.progressBar.setMinimum(0);
+        this.progressBar.setMaximum(total);
+        this.progressBar.setValue(submitted);
+        this.progressBar.setString(message);
+
+        int maxSize = this.converter.getConvertBufferMaxSize();
+        int size = this.converter.getConvertBufferFill();
+        this.convertQueueFill.setMinimum(0);
+        this.convertQueueFill.setMaximum(maxSize);
+        this.convertQueueFill.setValue(size);
+        this.convertQueueFill.setString(String.format("Convert queue fill: %d/%d", size, maxSize));
+
+        maxSize = this.converter.getIOBufferMaxSize();
+        size = this.converter.getIOBufferFill();
+        this.ioQueueFill.setMinimum(0);
+        this.ioQueueFill.setMaximum(maxSize);
+        this.ioQueueFill.setValue(size);
+        this.ioQueueFill.setString(String.format("IO queue fill: %d/%d", size, maxSize));
+    }
+
+    @Override
+    protected void done() {
+        onDone.run();
+        Throwable t;
+        try {
+            t = get();
+        } catch (InterruptedException | ExecutionException e) {
+            t = e;
+        }
+        if (t == null) {
+            return;
+        }
+        JOptionPane.showMessageDialog(null, exceptionString(t));
+    }
+
+    private static String exceptionString(Throwable t) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream ps;
+        try {
+            ps = new PrintStream(out, true, "UTF-8");
+        } catch (UnsupportedEncodingException e1) {
+            throw new Error(e1);
+        }
+        t.printStackTrace(ps);
+        ps.close();
+        return new String(out.toByteArray(), StandardCharsets.UTF_8);
+    }
 }

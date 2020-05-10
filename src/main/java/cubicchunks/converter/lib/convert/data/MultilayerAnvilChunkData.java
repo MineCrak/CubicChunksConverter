@@ -21,23 +21,18 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package cubicchunks.converter.lib;
+package cubicchunks.converter.lib.convert.data;
 
-public class Dimension {
+import java.util.Map;
 
-    private final String name;
-    private final String directory;
+public class MultilayerAnvilChunkData {
+    private final Map<Integer, AnvilChunkData> worlds;
 
-    public Dimension(String name, String directory) {
-        this.name = name;
-        this.directory = directory;
+    public MultilayerAnvilChunkData(Map<Integer, AnvilChunkData> worlds) {
+        this.worlds = worlds;
     }
 
-    public String getName() {
-        return this.name;
-    }
-
-    public String getDirectory() {
-        return directory;
+    public Map<Integer, AnvilChunkData> getWorlds() {
+        return worlds;
     }
 }

@@ -21,11 +21,23 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package cubicchunks.converter.lib;
+package cubicchunks.converter.lib.convert.io;
 
-import java.io.IOException;
+import cubicchunks.converter.lib.convert.ChunkDataWriter;
+
 import java.nio.file.Path;
 
-public interface ISaveConverter {
-	void convert(IProgressListener progress, Path srcDir, Path dstDir) throws IOException;
+public class NoopChunkWriter implements ChunkDataWriter<Object> {
+
+    public NoopChunkWriter(Path path) {
+    }
+
+    @Override public void accept(Object o) {
+    }
+
+    @Override public void discardData() {
+    }
+
+    @Override public void close() {
+    }
 }

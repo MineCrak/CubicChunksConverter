@@ -21,23 +21,17 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package cubicchunks.converter.lib;
+package cubicchunks.converter.lib.convert;
 
-public class Dimension {
+import java.io.IOException;
 
-    private final String name;
-    private final String directory;
+/**
+ * Converts world metadata from world format of {@link IN} to world format of {@link OUT}.
+ */
+public interface LevelInfoConverter<IN, OUT> {
 
-    public Dimension(String name, String directory) {
-        this.name = name;
-        this.directory = directory;
-    }
-
-    public String getName() {
-        return this.name;
-    }
-
-    public String getDirectory() {
-        return directory;
-    }
+    /**
+     * Converts world metadata and copies unmodified non-chunk files.
+     */
+    void convert() throws IOException;
 }

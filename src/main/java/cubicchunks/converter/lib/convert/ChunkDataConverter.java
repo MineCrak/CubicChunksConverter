@@ -21,31 +21,26 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package cubicchunks.converter.lib;
+package cubicchunks.converter.lib.convert;
 
-public class ConverterRegistry {
-	private static final ISaveConverter[][] convertMapping = new ISaveConverter[SaveFormat.values().length][SaveFormat.values().length];
+import cubicchunks.converter.lib.conf.ConverterConfig;
 
-	static {
-		registerIdentityConverters();
-		registerConverters();
-	}
+import java.util.HashMap;
 
-	private static void registerIdentityConverters() {
-		for (SaveFormat format : SaveFormat.values()) {
-			register(format, format, new IdentityConverter());
-		}
-	}
+/**
+ * Converts chunk data from {@link IN} format to {@link OUT} format.
+ */
+public interface ChunkDataConverter<IN, OUT> {
 
-	private static void registerConverters() {
-		register(SaveFormat.VANILLA_ANVIL, SaveFormat.CUBIC_CHUNKS, new AnvilToCubicChunksConverter());
-	}
+    /**
+     * Converts the supplied input. This is expected to be called from multiple threads.
+     *
+     * @param input The chunk data to convert
+     * @return The converted chunk data
+     */
+    OUT convert(IN input);
 
-	public static void register(SaveFormat src, SaveFormat dst, ISaveConverter converter) {
-		convertMapping[src.ordinal()][dst.ordinal()] = converter;
-	}
-
-	public static ISaveConverter getConverter(SaveFormat src, SaveFormat dst) {
-		return convertMapping[src.ordinal()][dst.ordinal()];
-	}
+    default ConverterConfig getConfig() {
+        return null;
+    }
 }

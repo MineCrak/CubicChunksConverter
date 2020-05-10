@@ -21,13 +21,13 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package cubicchunks.converter.lib;
+package cubicchunks.converter.lib.convert.noop;
 
-import java.nio.file.Path;
+import cubicchunks.converter.lib.convert.ChunkDataConverter;
 
-public class IdentityConverter implements ISaveConverter {
-	@Override
-	public void convert(IProgressListener progress, Path srcDir, Path dstDir) {
+public class NoopDataConverter implements ChunkDataConverter<Object, Object> {
 
-	}
+    @Override public Object convert(Object input) {
+        return input;
+    }
 }

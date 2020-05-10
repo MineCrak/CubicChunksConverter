@@ -21,23 +21,27 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package cubicchunks.converter.lib;
+package cubicchunks.converter.lib.convert;
 
-public class Dimension {
+import java.io.IOException;
 
-    private final String name;
-    private final String directory;
+/**
+ * Writes chunks to disk, supplied in an in-memory representation specific to
+ * the world format.
+ *
+ * The {@link #accept(T)} method is expected to be called from multiple threads.
+ * Writing data to disk may be done in the background.
+ */
+public interface ChunkDataWriter<T> extends AutoCloseable {
 
-    public Dimension(String name, String directory) {
-        this.name = name;
-        this.directory = directory;
-    }
+    /**
+     * Writes given chunk data for writing to disk. This is expected to be
+     * called from a thread running in the background.
+     */
+    void accept(T t) throws IOException;
 
-    public String getName() {
-        return this.name;
-    }
-
-    public String getDirectory() {
-        return directory;
-    }
+    /**
+     * Deletes all written data.
+     */
+    void discardData() throws IOException;
 }

@@ -24,5 +24,12 @@
 package cubicchunks.converter.lib;
 
 public interface IProgressListener {
-	void setProgress(ConvertProgress progress);
+
+    void update(Void progress);
+
+    ErrorHandleResult error(Throwable t);
+
+    enum ErrorHandleResult {
+        IGNORE, IGNORE_ALL, STOP_KEEP_DATA, STOP_DISCARD
+    }
 }

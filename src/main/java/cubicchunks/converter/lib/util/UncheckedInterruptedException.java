@@ -21,8 +21,7 @@
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  *  THE SOFTWARE.
  */
-package cubicchunks.converter.lib;
+package cubicchunks.converter.lib.util;
 
-public enum SaveFormat {
-	VANILLA_ANVIL, CUBIC_CHUNKS
+public class UncheckedInterruptedException extends RuntimeException {
 }
